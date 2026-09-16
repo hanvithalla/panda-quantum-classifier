@@ -6,6 +6,29 @@ Project ID: `F08-I3` · Archetype: `stress_test` · Full machine-readable spec: 
 
 ---
 
+## Status
+
+| Milestone | State |
+|---|---|
+| 1. Read & digest — environment prepared | ✅ **Done** (2026-09-16) — [`setup_verification.py`](setup_verification.py) → [`setup_log.txt`](setup_log.txt), 19/20 checks pass |
+| 2. Download data | ⬜ Next |
+| 3–6 | ⬜ Pending |
+
+### Reproducing the Milestone 1 check
+
+```bash
+pip install -r requirements.txt
+python setup_verification.py          # writes setup_log.txt
+```
+
+The script does not merely import things — it runs the pipeline it claims to verify: PCA to 8 components, an 8-qubit `ZZFeatureMap`/`RealAmplitudes` pair, a QSVC fit/predict on a quantum kernel, a VQC training loop, an `EstimatorQNN` forward pass, exact (shot-noise-free) statevector primitives, and a real streamed row from NSL-KDD.
+
+**Verified result (Python 3.10.10, qiskit 2.5.2 / qiskit-machine-learning 0.9.1 / datasets 5.0.1):** all three method arms run at the fixed 8-qubit budget on noiseless statevector primitives; NSL-KDD streams a real row in ~6 s and has **42** columns (the probe recorded 41).
+
+**One caveat, and it matters for Milestone 2:** `load_dataset("codymlewis/nbaiot")` **fails** — the HF repo holds only a loader script (`nbaiot.py`), and `datasets>=4` removed script support (`RuntimeError: Dataset scripts are no longer supported`). That script only downloads the UCI archive anyway, and [that archive](https://archive.ics.uci.edu/static/public/442/detection+of+iot+botnet+attacks+n+baiot.zip) responds HTTP 200, so **direct download from UCI is the ingestion path** for N-BaIoT. This confirms the risk the spec already flagged rather than introducing a new one; the week-1 fallback `codymlewis/TON_IoT_network` was also confirmed reachable.
+
+---
+
 ## Summary
 
 A near-identical Gaussian-noise / imbalance robustness comparison of quantum classifiers against classical baselines already exists — but only on five generic UCI toy datasets (iris, wine quality, breast cancer, UCI-HAR, Pima diabetes). This project reruns the same corruption axis, fixed to the field's own three QML method families, on **two real network-intrusion datasets** instead.
@@ -30,10 +53,10 @@ Qiskit is chosen over PennyLane for the QNN arm because PennyLane's `pyproject.t
 
 | Dataset | Source | License | Notes |
 |---|---|---|---|
-| **NSL-KDD** | [`Mireu-Lab/NSL-KDD`](https://huggingface.co/datasets/Mireu-Lab/NSL-KDD) | GPL-3.0 | 151,165 rows × 41 cols (38 numeric + `protocol_type`/`service`/`flag` categorical + class label), 72.6 MB. Schema probe-confirmed, 0 nulls across sampled columns. |
-| **N-BaIoT** | [`codymlewis/nbaiot`](https://huggingface.co/datasets/codymlewis/nbaiot) | CC-BY-4.0 | ~1.7 GB download / ~3.1 GB decompressed. Real-device IoT botnet traffic (9 devices, Mirai/BASHLITE) — a different modality from flow-record datasets. **Schema is NOT probe-confirmed** (HF datasets-server reports "no viewer"); verify `load_dataset` returns rows and record the real schema before building preprocessing on it. |
+| **NSL-KDD** | [`Mireu-Lab/NSL-KDD`](https://huggingface.co/datasets/Mireu-Lab/NSL-KDD) | GPL-3.0 | 151,165 rows × **42** cols (38 numeric + `protocol_type`/`service`/`flag` categorical + `class` label), 72.6 MB. Column count and a real row confirmed by `setup_verification.py`; the original probe recorded 41 cols. |
+| **N-BaIoT** | [UCI archive 442](https://archive.ics.uci.edu/dataset/442/detection+of+iot+botnet+attacks+n+baiot) — the HF mirror [`codymlewis/nbaiot`](https://huggingface.co/datasets/codymlewis/nbaiot) is script-only and **unusable on `datasets>=4`** | CC-BY-4.0 | ~1.7 GB download / ~3.1 GB decompressed. Real-device IoT botnet traffic (9 devices, Mirai/BASHLITE) — a different modality from flow-record datasets. **Schema still unconfirmed**; record the real columns during ingestion before building preprocessing on it. |
 
-Both are freely downloadable via the `datasets` library — no login, form, DUA, or credentialing course.
+NSL-KDD loads via the `datasets` library; N-BaIoT is fetched from UCI directly (see [Status](#status)). Neither requires a login, form, DUA, or credentialing course.
 
 ## Constraint axis
 
@@ -89,7 +112,7 @@ The [closest hit](https://www.semanticscholar.org/paper/71dd01e6f2bf5e05f5dbff1e
 ## Milestones
 
 1. **Read & digest** — internalize the design: three field-standard methods trained once on clean NSL-KDD and N-BaIoT, then scored under increasing additive Gaussian noise on the PCA-reduced features.
-2. **Download data** — pull both datasets; for N-BaIoT specifically, confirm `load_dataset` returns rows and inspect the real column schema *before* building preprocessing. If it fails, pick a fallback (e.g. ToN_IoT, already probed) **in week 1, not week 10**.
+2. **Download data** — pull both datasets. NSL-KDD loads via `load_dataset`; N-BaIoT must come from the UCI archive directly (confirmed during Milestone 1) — inspect and record its real column schema *before* building preprocessing. Fallback `codymlewis/TON_IoT_network` is confirmed reachable if ingestion proves too costly: decide **in week 1, not week 10**.
 3. **Preprocess** — same encoding / scaling / PCA-to-8-components / 70-30 split / 3-seed protocol as F08-I1 and F08-I2 (budget fixed, not swept).
 4. **Train** — QSVC, VQC, and QNN once per dataset per seed on clean training data: 18 training runs.
 5. **Score under corruption** — at test time only, add i.i.d. Gaussian noise (mean 0, std = level × per-feature training-split std) to the PCA-reduced test features and score with the already-trained model: 3 × 2 × 4 × 3 = 72 scoring passes, no extra training.
@@ -97,7 +120,7 @@ The [closest hit](https://www.semanticscholar.org/paper/71dd01e6f2bf5e05f5dbff1e
 
 ## Risks
 
-- **N-BaIoT schema unconfirmed** — no queryable schema on HF; verify the load path before committing to it as dataset 2, with ToN_IoT identified as a week-1 fallback.
+- **N-BaIoT ingestion** — *confirmed 2026-09-16:* `load_dataset` does not work (script-only HF repo, unsupported by `datasets>=4`), so ingestion goes through the UCI zip, which unpacks to ~3.1 GB and needs its own parser; its column schema is still unverified. `codymlewis/TON_IoT_network` is the reachable week-1 fallback.
 - **Noise levels are an a priori choice** — 0.1/0.3/0.6× std is reasonable but not validated against what real IoT packet loss / telemetry noise looks like statistically. Treat the exact levels as adjustable pending a quick literature check; the overall design does not change.
 - **Seed variance** — macro-F1 on rare attack subtypes could be volatile with only 3 seeds; ~50 h of unused headroom allows adding seeds if early runs show high variance.
 

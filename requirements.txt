@@ -1,0 +1,9 @@
+# F08-I3 environment -- versions verified by setup_verification.py (see setup_log.txt)
+qiskit==2.5.2
+qiskit-machine-learning==0.9.1
+datasets==5.0.1
+pandas==2.3.3
+scikit-learn==1.7.2
+numpy==2.2.6
+# N-BaIoT is fetched from the UCI archive directly (the HF repo is a loader
+# script, unsupported by datasets>=4); huggingface_hub ships with `datasets`.

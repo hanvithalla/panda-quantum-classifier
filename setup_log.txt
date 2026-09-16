@@ -1,0 +1,56 @@
+========================================================================
+F08-I3 -- Milestone 1 environment verification
+Quantum classifier robustness to noisy IoT telemetry (QSVC / VQC / QNN)
+========================================================================
+
+--- Environment ---
+Timestamp (UTC)  : 2026-09-16T10:41:10+00:00
+Platform         : Windows-10-10.0.19045-SP0
+Python           : 3.10.10 (C:\Users\RCC\AppData\Local\Programs\Python\Python310\python.exe)
+
+--- Core library versions ---
+[PASS] import qiskit: 2.5.2
+[PASS] import qiskit-machine-learning: 0.9.1
+[PASS] import datasets: 5.0.1
+[PASS] import pandas: 2.3.3
+[PASS] import scikit-learn: 1.7.2
+[PASS] import numpy: 2.2.6
+
+--- Method arms (all from qiskit-machine-learning) ---
+[PASS] QSVC + FidelityQuantumKernel (quantum kernel arm): importable
+[PASS] VQC (variational arm): importable
+[PASS] EstimatorQNN / SamplerQNN (hybrid QNN arm): importable
+
+--- Project constraint: PCA components == qubits == 8 ---
+[PASS] PCA -> 8 components: shape (24, 8)
+[PASS] 8-qubit circuits build: ZZFeatureMap=8q, RealAmplitudes=8q
+[PASS] QSVC smoke fit/predict: 8 predictions in 4.6s (noiseless statevector)
+[PASS] VQC smoke fit: 3 COBYLA iters in 0.8s, ansatz=8q
+[PASS] EstimatorQNN forward pass: output (4, 1), 16 weights, 0.0s
+[PASS] Noiseless statevector primitives available: StatevectorEstimator, StatevectorSampler (exact, no shot noise)
+
+--- Dataset 1: NSL-KDD (Mireu-Lab/NSL-KDD) ---
+[PASS] NSL-KDD metadata: 42 columns, first 6: ['duration', 'protocol_type', 'service', 'flag', 'src_bytes', 'dst_bytes']
+[PASS] NSL-KDD real row fetched (streaming): 42 fields in 5.7s; label column ['class'] = ['normal']
+      categorical/numeric split in sampled row: 4 non-numeric / 38 numeric
+      sample: {'duration': 0, 'protocol_type': 'tcp', 'service': 'ftp_data', 'flag': 'SF', 'src_bytes': 491}
+
+--- Dataset 2: N-BaIoT (codymlewis/nbaiot) ---
+[WARN] N-BaIoT via datasets library: RuntimeError: Dataset scripts are no longer supported, but found nbaiot.py
+      -> The HF repo is a loader SCRIPT (nbaiot.py), not data files;
+         datasets>=4 removed script support, so load_dataset() cannot be used.
+         The script itself just downloads the UCI archive, so the
+         supported path is to fetch that archive directly.
+[PASS] N-BaIoT upstream (UCI archive) reachable: HTTP 200 -- viable direct-download path
+[PASS] Week-1 fallback reachable (codymlewis/TON_IoT_network): available if N-BaIoT ingestion proves too costly
+
+--- Summary ---
+19 passed, 1 warning(s), 0 failed out of 20 checks.
+  WARN: N-BaIoT via datasets library -- RuntimeError: Dataset scripts are no longer supported, but found nbaiot.py
+
+STATUS: READY (with caveats)
+  Toolchain and the 8-qubit budget are verified end to end; all three
+  method arms run on a noiseless statevector simulator, and NSL-KDD
+  loads. N-BaIoT needs the documented direct-download path instead of
+  load_dataset() -- this confirms the risk already recorded in
+  project_data.json rather than a new blocker.
