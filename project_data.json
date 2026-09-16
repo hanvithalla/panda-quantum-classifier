@@ -1,0 +1,231 @@
+{
+  "id": "F08-I3",
+  "title": "Robustness to Noisy Telemetry, Tested Where the Field's Own Papers Say It Would Matter: A Feature-Corruption Stress Test of Quantum Classifiers on IoT Intrusion Data",
+  "archetype": "stress_test",
+  "one_line": "A near-identical Gaussian-noise/imbalance robustness comparison of quantum classifiers against classical baselines already exists, but only on five generic UCI toy datasets (iris, wine quality, breast cancer, UCI-HAR, Pima diabetes); this reruns the same corruption axis, fixed to the field's own three QML method families, on two real network-intrusion datasets instead.",
+  "why_publishable": "IoT network telemetry is intermittently noisy/lossy by nature -- the deployment premise every QML-for-IoT-security paper in this scan states as its target. Testing robustness on Iris does not tell anyone whether a quantum classifier's claimed resilience survives on the traffic data it is actually proposed for.",
+  "task": "Network intrusion detection (binary and multiclass), scored at test time under increasing input feature corruption.",
+  "methods": [
+    {
+      "name": "QSVC (Quantum Support Vector Classifier / quantum kernel method)",
+      "code_url": "https://github.com/qiskit-community/qiskit-machine-learning",
+      "code_status": "public",
+      "trained_by_team": true,
+      "stars": 1087,
+      "last_commit": "2026-08-04T13:50:17Z",
+      "license": "Apache-2.0",
+      "installs_on_colab": true,
+      "paper_url": "https://www.semanticscholar.org/paper/f28f64cb03b89f1bfb753d32d2d4b1d8471cb76d",
+      "paper_title_as_probed": "Quantum Machine Learning for Network Intrusion Detection Systems, a Systematic Literature Review",
+      "note": "Systematic review (probe-confirmed first author Otavio Kiyatake Nicesio, 2023) identifies QSVM/quantum kernels as the dominant quantum-kernel approach in QML-IDS. Implementation confirmed present via repo file listing: qiskit_machine_learning/algorithms/classifiers/qsvc.py + kernels/fidelity_quantum_kernel.py (PegasosQSVC also present for near-linear-time kernel training)."
+    },
+    {
+      "name": "VQC (Variational Quantum Classifier)",
+      "code_url": "https://github.com/qiskit-community/qiskit-machine-learning",
+      "code_status": "public",
+      "trained_by_team": true,
+      "stars": 1087,
+      "last_commit": "2026-08-04T13:50:17Z",
+      "license": "Apache-2.0",
+      "installs_on_colab": true,
+      "paper_url": "https://www.semanticscholar.org/paper/024b06315a81807a1da31ca1aabbe0468a244112",
+      "paper_title_as_probed": "Network Anomaly Detection Using Quantum Neural Networks on Noisy Quantum Computers",
+      "note": "Probe-confirmed: Alon Kukliansky, 2024, IEEE Trans. Quantum Engineering, DOI 10.1109/TQE.2024.3359574; scan's methods[] entry groups VQC/QNN together under this same paper URL. Implementation confirmed present: qiskit_machine_learning/algorithms/classifiers/vqc.py."
+    },
+    {
+      "name": "QNN (Quantum Neural Network, EstimatorQNN/SamplerQNN hybrid quantum-classical model)",
+      "code_url": "https://github.com/qiskit-community/qiskit-machine-learning",
+      "code_status": "public",
+      "trained_by_team": true,
+      "stars": 1087,
+      "last_commit": "2026-08-04T13:50:17Z",
+      "license": "Apache-2.0",
+      "installs_on_colab": true,
+      "paper_url": "https://arxiv.org/abs/2410.16308",
+      "paper_title_as_probed": "QML-IDS: Quantum Machine Learning Intrusion Detection System",
+      "note": "Probe-confirmed: Diego Abreu, 2024, ISCC. Implementation confirmed present: qiskit_machine_learning/neural_networks/estimator_qnn.py and sampler_qnn.py. Chosen over PennyLane for this arm because PennyLane's pyproject.toml declares requires-python>=3.12, a possible mismatch with Colab's default runtime (see probe.corrected); qiskit-machine-learning states no such floor and already ships all three method arms in one repo."
+    }
+  ],
+  "datasets": [
+    {
+      "name": "NSL-KDD",
+      "url": "https://huggingface.co/datasets/Mireu-Lab/NSL-KDD",
+      "size": "151,165 rows x 41 columns (38 numeric + protocol_type/service/flag categorical + class label); 72.6MB repo (probe-confirmed)",
+      "license": "gpl-3.0",
+      "license_note": "GPL-3.0 recorded as found on the HF listing; academic re-use with citation, per project rule 9, is not blocked by this.",
+      "gated": false,
+      "schema": "probe-confirmed via probe_artifacts: 41 columns incl. duration, protocol_type, service, flag, src_bytes, dst_bytes, ... class; 0 nulls recorded across all sampled columns; first row sample confirmed (protocol_type=tcp, service=ftp_data, flag=SF, class label present).",
+      "access": "`datasets` library, `load_dataset('Mireu-Lab/NSL-KDD')`; no login, no form.",
+      "role": "standard",
+      "role_note": ""
+    },
+    {
+      "name": "N-BaIoT",
+      "url": "https://huggingface.co/datasets/codymlewis/nbaiot",
+      "size": "download 1,772,922,927 bytes (~1.7GB) / decompressed 3,361,800,456 bytes (~3.1GB), probe-confirmed",
+      "license": "cc-by-4.0",
+      "license_note": null,
+      "gated": false,
+      "schema": "NOT enumerated by probe_artifacts: HF datasets-server reports schema_status='error' / 'datasets-server has no viewer for this dataset'. Original N-BaIoT construction (9 real IoT devices, Mirai/BASHLITE attacks, per-time-window statistical features) is well documented externally, but exact column count/label set here is unconfirmed by this pipeline's tools -- team verifies the `load_dataset` call actually returns rows, and records the real schema, before building preprocessing on it (see risks).",
+      "access": "`datasets` library, no login; download size (1.7GB) is within the disk budget at the sampling scale this pack uses.",
+      "role": "standard",
+      "role_note": "real-device IoT botnet traffic, a different modality from the flow-record datasets used elsewhere in this pack"
+    }
+  ],
+  "constraint_axis": {
+    "name": "test-time input feature-corruption severity (additive Gaussian noise on the PCA-reduced feature vector, applied only at evaluation)",
+    "levels": [
+      "clean (0 sigma)",
+      "low (0.1x per-feature std)",
+      "medium (0.3x per-feature std)",
+      "high (0.6x per-feature std)"
+    ],
+    "why": "mirrors the corruption mechanism of the closest precedent found in novelty_search (Gaussian feature-noise injection) but applied to real network-intrusion telemetry instead of generic UCI tables, directly testing the deployment condition (noisy/lossy IoT channels) the field's own papers cite as their motivation."
+  },
+  "holds_fixed": [
+    "trained model per method/dataset/seed -- one training run on clean data; corruption is applied only at test time ('fix the methods, vary corruption' per the stress_test archetype)",
+    "PCA budget fixed at 8 components/qubits (F08-I1's middle level), so this idea does not also re-litigate the budget axis",
+    "preprocessing pipeline and train/test split identical to F08-I1/F08-I2",
+    "noise scale: the per-feature standard deviation used to set 'low/medium/high' is estimated once from the *clean* training split and reused identically for all three methods, so no method sees an easier or harder corruption by construction"
+  ],
+  "confounds_considered": [
+    {
+      "confound": "quantum circuit/shot noise (hardware or simulator noise) could be conflated with the input-data corruption being tested here",
+      "why_it_cannot_explain_the_result": "all circuits run on an exact, noiseless statevector simulator; the only noise source is the explicit additive Gaussian perturbation applied to the classical feature vector before encoding, so circuit noise cannot contribute to any measured degradation."
+    },
+    {
+      "confound": "the amount of corruption relative to feature scale could differ if features aren't on a common scale",
+      "why_it_cannot_explain_the_result": "noise is added as a multiple of each feature's own clean-split standard deviation, not an absolute value, so 'low/medium/high' means the same relative perturbation for every feature and every dataset."
+    },
+    {
+      "confound": "retraining under corruption (rather than corrupting only at test time) would let a method's optimizer adapt to the noise, mixing training-time robustness into what is meant to be a frozen-model degradation question",
+      "why_it_cannot_explain_the_result": "corruption is applied only at test/inference time on a model trained once on clean data (see holds_fixed), matching the stress_test archetype's own definition rather than adversarial training."
+    }
+  ],
+  "novelty_search": {
+    "claim": "no study stress-tests QSVC/VQC/QNN under input feature-noise injection specifically on IoT network-intrusion data, as opposed to generic UCI tabular data or quantum-circuit/hardware noise.",
+    "queries": [
+      "quantum machine learning intrusion detection robustness noisy features corrupted sensor data degradation",
+      "quantum classifier robustness feature noise input perturbation comparison classical",
+      "robust evaluation quantum machine learning noise imbalance feature reduction"
+    ],
+    "year_bounded": false,
+    "what_came_back": "The closest hit, 'Robust evaluation of classical and quantum machine learning under noise, imbalance, feature reduction and explainability' (2025), runs almost exactly this design -- Gaussian feature-noise injection, SMOTE/ADASYN-induced imbalance, ANOVA feature selection, comparing QSVM/QkNN/VQC against classical Decision Tree/kNN/RF/LogReg/SVM -- but exclusively on five generic UCI datasets (iris, wine quality, breast cancer, UCI human-activity-recognition, Pima diabetes), none of them network-security data. Other hits are either about quantum *circuit*/hardware noise (a different corruption source; see confounds_considered) or non-quantum IDS robustness work. No hit combines feature-noise stress-testing with quantum IDS methods on network-intrusion data -- this is exactly the kind of near-miss a dataset-name-specific query alone would not surface.",
+    "closest_hit_url": "https://www.semanticscholar.org/paper/71dd01e6f2bf5e05f5dbff1e4b84c1b6edd865e2"
+  },
+  "evidence": [
+    {
+      "claim": "Kukliansky et al.'s QNN paper frames its evaluation as working within NISQ hardware/circuit-noise limits, which this idea explicitly distinguishes from the input-data feature noise it tests.",
+      "source_url": "https://www.semanticscholar.org/paper/024b06315a81807a1da31ca1aabbe0468a244112",
+      "where": "abstract-level, as recorded in the scan file's papers[].note",
+      "says": "'explicitly frames itself as working within NISQ hardware limits' -- i.e. circuit/hardware noise, not the test-time input-feature corruption this idea introduces."
+    },
+    {
+      "claim": "the field's foundational IoT-quantum survey establishes constrained, resource-limited IoT hardware (battery, compute, memory) as the field's own operating premise, which the QML-for-IDS strand inherits when it targets 'real IoT/IIoT networks'.",
+      "source_url": "https://arxiv.org/abs/2402.00790",
+      "where": "abstract-level, as recorded in the scan file's surveys[].what_it_covers",
+      "says": "'maps [post-quantum cryptosystems] against IoT architectures and constraints (battery, compute, memory)'"
+    }
+  ],
+  "probe": {
+    "file": "runs/cOgRevQAAAAJ/probe/08-candidates.json",
+    "corrected": [
+      "N-BaIoT's HF datasets-server has no table viewer ('schema_status': 'error', detail 'datasets-server has no viewer for this dataset'), so its column-level schema is NOT probe-confirmed the way NSL-KDD's is -- downgraded from an assumed-known dataset to one with an explicit first-week load-and-verify step in the protocol and risks",
+      "the closest-hit precedent for the noise/imbalance robustness comparison was found only via a broad, non-dataset-name-specific novelty_search query ('robust evaluation quantum machine learning noise imbalance feature reduction'); a query requiring a specific IoT-security dataset name would have missed it entirely, since that paper never mentions IoT or network-security data at all"
+    ]
+  },
+  "metrics": [
+    {
+      "name": "macro-F1 at each corruption level",
+      "why": "imbalance-aware single number per level, consistent with F08-I1/I2 so results are comparable across this pack."
+    },
+    {
+      "name": "relative degradation (delta macro-F1 from that method/dataset/seed's own clean-level score)",
+      "why": "the stress_test archetype's point is to rank by degradation, not by clean/peak performance -- the field's existing single-point papers only ever report the peak."
+    }
+  ],
+  "compute": {
+    "n_methods": 3,
+    "n_datasets": 2,
+    "n_axis_levels": 4,
+    "n_seeds": 3,
+    "runs": 18,
+    "minutes_per_run": 30,
+    "total_gpu_hours": 9.0,
+    "peak_vram_gb": 2.0,
+    "disk_gb": 6.0,
+    "fits_free_colab": true,
+    "how_computed": "18 TRAINING runs = 3 methods x 2 datasets x 3 seeds (matching F08-I2's training cost, since corruption here is test-time-only); the 4 corruption levels are extra forward-pass scoring on the same trained models, adding well under 1 extra minute per run. 18 x 30 min = 540 min = 9.0 GPU-hours.",
+    "what_was_cut": "same <=1,300-row-per-run subsample as F08-I1/I2; N-BaIoT's full ~3.1GB decompressed size is not used in full -- only the same-sized subsample, downloaded once (1.7GB) and cached, not re-downloaded per run."
+  },
+  "expected_findings": [
+    "one method may have the best clean-data score but the steepest degradation curve, inverting the ranking the field would report if it only ever evaluated on clean, curated data (as every QML-IDS paper found in this pack's novelty search does) -- 'the ranking inverts under a constraint everyone actually faces'.",
+    "null result: degradation curves may be near-parallel across methods, meaning no method is more or less robust than another to this kind of corruption -- the field's clean-data rankings would then be safe to use even though nobody has checked.",
+    "N-BaIoT and NSL-KDD may show different degradation orderings, meaning robustness claims transplant no better across IoT-security datasets than accuracy claims do."
+  ],
+  "null_result_is_publishable": true,
+  "risks": [
+    "N-BaIoT's HF listing has no queryable schema (datasets-server reports 'no viewer') -- the team must verify the load path works before committing to it as dataset 2; a fallback (ToN_IoT, already probed in this pack) should be identified in week 1.",
+    "the chosen noise levels (0.1/0.3/0.6x std) are a reasonable a priori choice, not validated against what real IoT packet loss/telemetry noise actually looks like statistically -- treat the exact levels as adjustable pending a quick literature check, without changing the overall stress-test design.",
+    "macro-F1 on rare-attack subtypes could be volatile with only 3 seeds -- the ~50h of unused headroom below the 60h ceiling gives room to add seeds if early runs show high variance."
+  ],
+  "constraint_check": {
+    "open_data": "NSL-KDD (HF) and N-BaIoT (HF) are both freely downloadable, no form/DUA/credentialing course; N-BaIoT's missing schema viewer is a tooling gap, not an access gate (download itself succeeds per probe).",
+    "open_code": "all three methods ship in the single public, Apache-2.0 qiskit-machine-learning repo; 0 of 3 methods reimplemented.",
+    "compute": "18 training runs x ~30 min = 9.0 GPU-hours against a ~60h ceiling, leaving ~51h of headroom; every run well under 4h; peak VRAM ~2GB; disk ~6GB.",
+    "contribution": "answers, for the domain the field's own papers say they target (noisy/lossy real IoT telemetry) rather than the generic tabular data the closest existing robustness study used, whether any of the three standard quantum method families is actually more robust than the others -- or whether the field's clean-data rankings are misleading once telemetry gets noisy."
+  },
+  "milestones": [
+    {
+      "title": "Read & digest",
+      "description": "This idea reruns, on real IoT network-intrusion data, a feature-corruption robustness comparison whose closest existing precedent tested QSVM/QkNN/VQC-style quantum classifiers against classical baselines only on five generic UCI tables (iris, wine quality, breast cancer, UCI-HAR, Pima diabetes); here the same three field-standard methods -- QSVC, VQC, and QNN -- are trained once on clean NSL-KDD and N-BaIoT data and then scored at test time under increasing additive Gaussian noise (clean, 0.1x, 0.3x, 0.6x per-feature standard deviation) added to the PCA-reduced features. Corruption is applied only at inference on a frozen, once-trained model, and the noise scale is fixed from the clean training split and reused identically across methods, so training-time adaptation and differing per-feature scales can't be mistaken for a robustness effect, and because the circuits run on a noiseless statevector simulator, quantum circuit/shot noise cannot be conflated with the input-corruption being tested. This directly tests the deployment condition -- noisy, lossy IoT telemetry -- that the field's own papers cite as their motivation but never actually evaluate under. The expected outcome is either that the method with the best clean-data score turns out to have the steepest degradation curve (inverting the ranking the field would report from clean-only evaluation), or a null result in which degradation curves run roughly parallel across methods, meaning no method is more or less robust and the field's clean-data rankings hold up; a difference in degradation ordering between N-BaIoT and NSL-KDD would additionally show that robustness claims transplant no better across IoT-security datasets than accuracy claims do."
+    },
+    {
+      "title": "Download NSL-KDD (HF) and N-BaIoT (HF); for N-BaIoT specifically",
+      "description": "Download NSL-KDD (HF) and N-BaIoT (HF); for N-BaIoT specifically, first confirm the `load_dataset` call actually returns rows and inspect the real column schema (the probe flagged 'no viewer', meaning this is unconfirmed) before building any preprocessing on it -- if it fails, identify a fallback (e.g. ToN_IoT, already probed in this pack) in week 1, not week 10."
+    },
+    {
+      "title": "Apply the same encoding/scaling/PCA-to-8-components/70-30-split/3-seed protocol as F08-I1",
+      "description": "Apply the same encoding/scaling/PCA-to-8-components/70-30-split/3-seed protocol as F08-I1 and F08-I2 (budget fixed, not swept here)."
+    },
+    {
+      "title": "Train QSVC",
+      "description": "Train QSVC, VQC, and QNN once per dataset per seed on clean training data only -- 18 training runs, matching F08-I2's training cost."
+    },
+    {
+      "title": "At test time only",
+      "description": "At test time only, for each of the 4 corruption levels, add i.i.d. Gaussian noise (mean 0, std = level x per-feature training-split std) to the PCA-reduced test features, then score with the already-trained model -- 3 methods x 2 datasets x 4 levels x 3 seeds = 72 scoring passes reusing the 18 trained models (no extra training)."
+    },
+    {
+      "title": "Report macro-F1 and delta-macro-F1 (relative to that",
+      "description": "Report macro-F1 and delta-macro-F1 (relative to that method/dataset/seed's own clean-level score) per corruption level; rank methods by degradation slope across the 4 levels, not by clean-level peak."
+    }
+  ],
+  "reading_list": [
+    {
+      "title": "Robust Evaluation of Classical and Quantum Machine Learning Under Noise, Imbalance, and Feature Reduction",
+      "url": "https://www.semanticscholar.org/paper/71dd01e6f2bf5e05f5dbff1e4b84c1b6edd865e2",
+      "why": "This is the stress-test design's direct precedent: Gaussian feature-noise injection comparing QSVM/QkNN/VQC against classical methods on generic UCI datasets—this idea relocates the same design to real network-intrusion data."
+    },
+    {
+      "title": "Quantum Machine Learning for Network Intrusion Detection Systems, a Systematic Literature Review",
+      "url": "https://www.semanticscholar.org/paper/f28f64cb03b89f1bfb753d32d2d4b1d8471cb76d",
+      "why": "Establishes QSVC as the dominant quantum-kernel method in QML-IDS and frames the noisy IoT deployment condition that this idea operationalizes as a concrete, quantified stress test."
+    },
+    {
+      "title": "Network Anomaly Detection Using Quantum Neural Networks on Noisy Quantum Computers",
+      "url": "https://www.semanticscholar.org/paper/024b06315a81807a1da31ca1aabbe0468a244112",
+      "why": "Documents VQC's robustness claims under NISQ hardware noise—contrast this quantum-circuit noise with the input-feature corruption this idea tests to see where robustness actually comes from."
+    },
+    {
+      "title": "QML-IDS: Quantum Machine Learning Intrusion Detection System",
+      "url": "https://arxiv.org/abs/2410.16308",
+      "why": "Presents the EstimatorQNN/SamplerQNN hybrid you'll train as the third arm; shows how the same archetype handles network data when the test condition is clean, before this idea adds feature corruption."
+    },
+    {
+      "title": "Post-Quantum Cryptosystems and IoT Constraints",
+      "url": "https://arxiv.org/abs/2402.00790",
+      "why": "Frames resource-constrained IoT hardware (battery, compute, memory) as the deployment context for QML-IDS—the environment where noisy telemetry is unavoidable and stress-testing becomes operationally relevant."
+    }
+  ]
+}
